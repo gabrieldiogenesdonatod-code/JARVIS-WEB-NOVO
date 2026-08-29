@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#02060b">
+<title>J.A.R.V.I.S V8</title>
+
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0}
+body{
+  overflow:hidden;background:#000204;color:#dffaff;
+  font-family:Consolas,"Courier New",monospace
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.12;
+  background-image:linear-gradient(rgba(0,200,255,.1) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(0,200,255,.1) 1px,transparent 1px);
+  background-size:45px 45px;
+  mask-image:radial-gradient(circle,black,transparent 80%)
+}
+#app{width:100%;height:100%;display:grid;grid-template-rows:70px 1fr 60px}
+header{
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+  border-bottom:1px solid rgba(0,200,255,.22)
+}
+.logo{color:#00c8ff;font:700 26px Arial;letter-spacing:5px;text-shadow:0 0 12px #00c8ff}
+.subtitle{color:#527783;font-size:8px;letter-spacing:2px;margin-top:4px}
+#systemStatus{color:#00ff9d;font-size:10px;letter-spacing:2px}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor;margin-right:7px}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 390px minmax(220px,280px);min-height:0}
+.chat{display:flex;flex-direction:column;min-width:0;border-right:1px solid rgba(0,200,255,.16)}
+.chat-title{padding:12px 18px;color:#00c8ff;font-size:10px;letter-spacing:3px;border-bottom:1px solid rgba(0,200,255,.12)}
+#messages{flex:1;overflow-y:auto;padding:20px}
+.message{margin-bottom:18px}
+.message-name{font-size:9px;font-weight:bold;letter-spacing:2px;color:#00c8ff;margin-bottom:6px}
+.message.user .message-name{color:#00ff9d}
+.message-text{color:#d7f7ff;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.input-area{display:flex;gap:7px;padding:12px;border-top:1px solid rgba(0,200,255,.18)}
+#prompt{
+  flex:1;min-width:0;background:rgba(0,10,18,.85);color:#e8faff;
+  border:1px solid #075b78;outline:none;padding:12px;font:12px Consolas
+}
+#prompt:focus{border-color:#00c8ff;box-shadow:0 0 10px rgba(0,200,255,.18)}
+button{
+  background:rgba(0,20,30,.85);color:#00c8ff;border:1px solid #008fb8;
+  padding:9px 12px;font:bold 10px Consolas;letter-spacing:1px;cursor:pointer
+}
+button:hover{background:#00c8ff;color:#001018}
+button:disabled{opacity:.45;cursor:not-allowed}
+.core-area{display:flex;align-items:center;justify-content:center;overflow:hidden;border-right:1px solid rgba(0,200,255,.16)}
+.core{position:relative;width:310px;height:310px}
+.ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(0,200,255,.3)}
+.ring1{animation:spin 10s linear infinite;border-top:3px solid #00c8ff}
+.ring2{inset:25px;animation:spinReverse 7s linear infinite;border-left:3px solid #00ff9d}
+.ring3{inset:55px;animation:spin 5s linear infinite;border-top:2px solid #8cecff}
+.ring4{inset:85px;border:2px dashed rgba(0,200,255,.5);animation:spinReverse 12s linear infinite}
+.core-center{
+  position:absolute;inset:105px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle,#4deaff 0%,#008fb8 20%,#06283a 48%,transparent 72%);
+  box-shadow:0 0 22px #00c8ff,0 0 60px rgba(0,200,255,.55),inset 0 0 22px #00c8ff;
+  animation:pulse 2s ease-in-out infinite
+}
+.core-letter{color:#fff;font:bold 34px Arial;text-shadow:0 0 10px #fff,0 0 24px #00c8ff}
+.wave{position:absolute;bottom:35px;left:50%;transform:translateX(-50%);display:flex;gap:3px;height:30px}
+.wave span{width:3px;height:7px;background:#00c8ff;box-shadow:0 0 7px #00c8ff;animation:wave 1s ease-in-out infinite}
+.wave span:nth-child(2){animation-delay:.1s}.wave span:nth-child(3){animation-delay:.2s}
+.wave span:nth-child(4){animation-delay:.3s}.wave span:nth-child(5){animation-delay:.4s}
+.wave span:nth-child(6){animation-delay:.5s}.wave span:nth-child(7){animation-delay:.6s}.wave span:nth-child(8){animation-delay:.7s}
+.hud{position:absolute;font-size:7px;letter-spacing:2px;color:#28758a;left:50%;transform:translateX(-50%)}
+.hud.top{top:25px}.hud.bottom{bottom:10px;color:#00c8ff}
+.panel{padding:18px;background:rgba(3,10,18,.65)}
+.panel-title{color:#00c8ff;font-size:10px;letter-spacing:3px;margin-bottom:16px}
+.stat{border:1px solid rgba(0,200,255,.16);padding:11px;margin-bottom:7px;background:rgba(0,20,30,.3)}
+.stat-name{color:#527783;font-size:8px;margin-bottom:4px}.stat-value{color:#00ff9d;font-size:10px;word-break:break-all}
+footer{display:flex;align-items:center;justify-content:center;gap:8px;border-top:1px solid rgba(0,200,255,.18)}
+footer button{min-width:120px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spinReverse{from{transform:rotate(360deg)}to{transform:rotate(0)}}
+@keyframes pulse{50%{transform:scale(1.07);filter:brightness(1.35)}}
+@keyframes wave{50%{height:27px}}
+body.listening .core-center{box-shadow:0 0 30px #00ff9d,0 0 75px rgba(0,255,157,.65),inset 0 0 25px #00ff9d}
+body.speaking .core-center{animation:pulseFast .55s ease-in-out infinite}
+@keyframes pulseFast{50%{transform:scale(1.16)}}
+@media(max-width:900px){
+  #app{grid-template-rows:62px 1fr 54px}
+  .main{grid-template-columns:1fr}
+  .core-area,.panel{display:none}
+  .logo{font-size:20px;letter-spacing:4px}
+  header{padding:0 14px}
+  .input-area{flex-wrap:wrap}
+  #prompt{flex-basis:100%}
+  .input-area button{flex:1}
+  footer{overflow-x:auto;justify-content:flex-start;padding:5px 8px}
+  footer button{min-width:105px}
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+<header>
+  <div>
+    <div class="logo">J.A.R.V.I.S</div>
+    <div class="subtitle">JUST A RATHER VERY INTELLIGENT SYSTEM</div>
+  </div>
+  <div id="systemStatus"><span class="status-dot"></span>SISTEMA PRONTO</div>
+</header>
+
+<div class="main">
+<section class="chat">
+  <div class="chat-title">◈ CONSOLE DE COMUNICAÇÃO</div>
+  <div id="messages"></div>
+  <div class="input-area">
+    <input id="prompt" type="text" placeholder="Comando ou pergunta..." autocomplete="off">
+    <button id="micButton" type="button">🎤 MICROFONE</button>
+    <button id="sendButton" type="button">ENVIAR</button>
+  </div>
+</section>
+
+<section class="core-area">
+  <div class="core">
+    <div class="ring ring1"></div><div class="ring ring2"></div>
+    <div class="ring ring3"></div><div class="ring ring4"></div>
+    <div class="core-center"><div class="core-letter">J</div></div>
+    <div class="hud top">J.A.R.V.I.S // CORE</div>
+    <div class="wave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="hud bottom">NEURAL CORE ONLINE</div>
+  </div>
+</section>
+
+<aside class="panel">
+  <div class="panel-title">◈ SYSTEM MONITOR</div>
+  <div class="stat"><div class="stat-name">CÉREBRO</div><div id="aiState" class="stat-value">OMNIROUTE</div></div>
+  <div class="stat"><div class="stat-name">SERVIDOR</div><div id="serverState" class="stat-value">PRONTO</div></div>
+  <div class="stat"><div class="stat-name">MICROFONE</div><div id="micState" class="stat-value">PRONTO</div></div>
+  <div class="stat"><div class="stat-name">VOZ</div><div id="voiceState" class="stat-value">ATIVA</div></div>
+  <div class="stat"><div class="stat-name">MODELO</div><div class="stat-value">AUTO</div></div>
+  <div class="stat"><div class="stat-name">ENDPOINT</div><div class="stat-value">localhost:20128</div></div>
+</aside>
+</div>
+
+<footer>
+  <button id="voiceTest" type="button">🔊 TESTAR VOZ</button>
+  <button id="voiceToggle" type="button">🔈 VOZ ON/OFF</button>
+  <button id="saveButton" type="button">💾 SALVAR</button>
+  <button id="newButton" type="button">✦ NOVA</button>
+</footer>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   CONFIGURAÇÃO — OMNIROUTE LOCAL
+   ============================================================ */
+const OMNIROUTE = "http://localhost:20128";
+const CHAT_ENDPOINT = OMNIROUTE + "/v1/chat/completions";
+const MODEL = "auto";
+const API_KEY = "";
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+let historico = [];
+let vozAtiva = true;
+let ouvindo = false;
+let processando = false;
+let recognition = null;
+let abortController = null;
+
+/* ============================================================
+   ELEMENTOS
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const promptEl = $("prompt");
+const messagesEl = $("messages");
+const micButton = $("micButton");
+const sendButton = $("sendButton");
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+function setStatus(texto){
+  $("systemStatus").innerHTML = '<span class="status-dot"></span>' + texto;
+}
+function setServer(texto, online=true){
+  const el=$("serverState"); el.textContent=texto;
+  el.style.color=online?"#00ff9d":"#ff496c";
+}
+function setAI(texto, online=true){
+  const el=$("aiState"); el.textContent=texto;
+  el.style.color=online?"#00ff9d":"#ff496c";
+}
+function setMic(texto){$("micState").textContent=texto}
+function setVoice(texto){$("voiceState").textContent=texto}
+
+/* ============================================================
+   CHAT
+   ============================================================ */
+function adicionarMensagem(autor,texto){
+  const div=document.createElement("div");
+  div.className="message"+(autor==="SENHOR"?" user":"");
+
+  const nome=document.createElement("div");
+  nome.className="message-name";
+  nome.textContent=autor;
+
+  const corpo=document.createElement("div");
+  corpo.className="message-text";
+  corpo.textContent=texto;
+
+  div.append(nome,corpo);
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop=messagesEl.scrollHeight;
+  return corpo;
+}
+
+function salvarHistoricoLocal(){
+  try{localStorage.setItem("jarvis_historico",JSON.stringify(historico.slice(-30)))}catch(e){}
+}
+function carregarHistoricoLocal(){
+  try{
+    const dados=JSON.parse(localStorage.getItem("jarvis_historico")||"[]");
+    if(Array.isArray(dados)) historico=dados;
+  }catch(e){historico=[]}
+}
+
+/* ============================================================
+   VOZ
+   ============================================================ */
+function obterVozPTBR(){
+  if(!("speechSynthesis" in window)) return null;
+  const vozes=speechSynthesis.getVoices();
+  return vozes.find(v=>v.lang&&v.lang.toLowerCase()==="pt-br")
+      || vozes.find(v=>v.lang&&v.lang.toLowerCase().startsWith("pt"))
+      || null;
+}
+
+function falar(texto){
+  if(!vozAtiva || !("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+
+  const utter=new SpeechSynthesisUtterance(texto);
+  utter.lang="pt-BR";
+  utter.rate=1;
+  utter.pitch=1;
+  utter.volume=1;
+
+  const voz=obterVozPTBR();
+  if(voz) utter.voice=voz;
+
+  utter.onstart=()=>{
+    document.body.classList.add("speaking");
+    setVoice("FALANDO");
+  };
+  utter.onend=()=>{
+    document.body.classList.remove("speaking");
+    setVoice("ATIVA");
+  };
+  utter.onerror=()=>{
+    document.body.classList.remove("speaking");
+    setVoice("ATIVA");
+  };
+  speechSynthesis.speak(utter);
+}
+
+function testarVoz(){
+  falar("Senhor, sistema de voz do J.A.R.V.I.S online.");
+}
+
+function alternarVoz(){
+  vozAtiva=!vozAtiva;
+  if(!vozAtiva && "speechSynthesis" in window) speechSynthesis.cancel();
+  setVoice(vozAtiva?"ATIVA":"DESATIVADA");
+}
+
+/* ============================================================
+   MICROFONE
+   ============================================================ */
+function prepararMicrofone(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    micButton.disabled=true;
+    setMic("NÃO SUPORTADO");
+    return;
+  }
+
+  recognition=new SR();
+  recognition.lang="pt-BR";
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.maxAlternatives=1;
+
+  recognition.onstart=()=>{
+    ouvindo=true;
+    document.body.classList.add("listening");
+    micButton.textContent="⏹ PARAR";
+    setMic("OUVINDO");
+    setStatus("OUVINDO...");
+  };
+
+  recognition.onresult=e=>{
+    const texto=e.results[0][0].transcript.trim();
+    if(texto){
+      promptEl.value=texto;
+      enviar();
+    }
+  };
+
+  recognition.onerror=e=>{
+    if(e.error!=="aborted") setMic("ERRO");
+  };
+
+  recognition.onend=()=>{
+    ouvindo=false;
+    document.body.classList.remove("listening");
+    micButton.textContent="🎤 MICROFONE";
+    if(!processando) setMic("PRONTO");
+    if(!processando) setStatus("SISTEMA PRONTO");
+  };
+}
+
+function alternarMicrofone(){
+  if(!recognition) return;
+  if(ouvindo){
+    try{recognition.stop()}catch(e){}
+  }else{
+    try{recognition.start()}catch(e){}
+  }
+}
+
+/* ============================================================
+   OMNIROUTE
+   ============================================================ */
+async function consultarOmniRoute(mensagem){
+  abortController=new AbortController();
+
+  const mensagens=[
+    {
+      role:"system",
+      content:
+        "Você é J.A.R.V.I.S, assistente pessoal inteligente. " +
+        "Responda sempre em português do Brasil, de forma objetiva, educada e útil. " +
+        "Chame o usuário de senhor quando apropriado."
+    },
+    ...historico.slice(-12),
+    {role:"user",content:mensagem}
+  ];
+
+  const headers={"Content-Type":"application/json"};
+  if(API_KEY) headers["Authorization"]="Bearer "+API_KEY;
+
+  const resposta=await fetch(CHAT_ENDPOINT,{
+    method:"POST",
+    headers,
+    body:JSON.stringify({
+      model:MODEL,
+      messages:mensagens,
+      temperature:.7,
+      stream:false
+    }),
+    signal:abortController.signal
+  });
+
+  if(!resposta.ok){
+    const erro=await resposta.text().catch(()=> "");
+    throw new Error("HTTP "+resposta.status+(erro?" — "+erro.slice(0,180):""));
+  }
+
+  const dados=await resposta.json();
+  const texto=dados?.choices?.[0]?.message?.content
+    ||dados?.choices?.[0]?.text
+    ||dados?.response
+    ||dados?.message?.content;
+
+  if(!texto) throw new Error("O OmniRoute não retornou uma resposta.");
+  return String(texto).trim();
+}
+
+async function verificarServidor(){
+  /* Não bloqueia a abertura da interface.
+     A verificação acontece em segundo plano. */
+  try{
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),1200);
+
+    const r=await fetch(OMNIROUTE,{
+      method:"GET",
+      cache:"no-store",
+      signal:controller.signal
+    }).catch(()=>null);
+
+    clearTimeout(timer);
+
+    if(r){
+      setServer("ONLINE",true);
+      setAI("OMNIROUTE",true);
+    }else{
+      setServer("AGUARDANDO",false);
+      setAI("OMNIROUTE",false);
+    }
+  }catch(e){
+    setServer("AGUARDANDO",false);
+    setAI("OMNIROUTE",false);
+  }
+}
+
+/* ============================================================
+   ENVIAR
+   ============================================================ */
+async function enviar(){
+  if(processando) return;
+
+  const texto=promptEl.value.trim();
+  if(!texto) return;
+
+  processando=true;
+  sendButton.disabled=true;
+  promptEl.disabled=true;
+  setStatus("PROCESSANDO...");
+  setServer("CONSULTANDO",true);
+
+  adicionarMensagem("SENHOR",texto);
+  promptEl.value="";
+
+  try{
+    const resposta=await consultarOmniRoute(texto);
+
+    historico.push({role:"user",content:texto});
+    historico.push({role:"assistant",content:resposta});
+    salvarHistoricoLocal();
+
+    adicionarMensagem("J.A.R.V.I.S",resposta);
+    falar(resposta);
+
+    setServer("ONLINE",true);
+    setAI("OMNIROUTE",true);
+    setStatus("SISTEMA PRONTO");
+  }catch(erro){
+    if(erro.name==="AbortError") return;
+
+    const mensagem=
+      "Não consegui acessar o OmniRoute agora. " +
+      "Verifique se o servidor está rodando em http://localhost:20128.";
+
+    adicionarMensagem("J.A.R.V.I.S",mensagem);
+    setServer("OFFLINE",false);
+    setAI("INDISPONÍVEL",false);
+    setStatus("SERVIDOR NÃO DISPONÍVEL");
+  }finally{
+    processando=false;
+    sendButton.disabled=false;
+    promptEl.disabled=false;
+    abortController=null;
+    promptEl.focus();
+  }
+}
+
+/* ============================================================
+   CONTROLES
+   ============================================================ */
+function salvarConversa(){
+  const texto=Array.from(messagesEl.querySelectorAll(".message"))
+    .map(m=>{
+      const nome=m.querySelector(".message-name")?.textContent||"";
+      const corpo=m.querySelector(".message-text")?.textContent||"";
+      return nome+": "+corpo;
+    }).join("\n\n");
+
+  const blob=new Blob([texto],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="jarvis-conversa.txt";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function novaConversa(){
+  if(!confirm("Começar uma nova conversa?")) return;
+  historico=[];
+  messagesEl.innerHTML="";
+  localStorage.removeItem("jarvis_historico");
+  if("speechSynthesis" in window) speechSynthesis.cancel();
+  setStatus("SISTEMA PRONTO");
+  setServer("PRONTO",true);
+  setAI("OMNIROUTE",true);
+  promptEl.focus();
+}
+
+/* ============================================================
+   INICIALIZAÇÃO ULTRARRÁPIDA
+   ============================================================ */
+function iniciar(){
+  carregarHistoricoLocal();
+
+  sendButton.addEventListener("click",enviar);
+  micButton.addEventListener("click",alternarMicrofone);
+  $("voiceTest").addEventListener("click",testarVoz);
+  $("voiceToggle").addEventListener("click",alternarVoz);
+  $("saveButton").addEventListener("click",salvarConversa);
+  $("newButton").addEventListener("click",novaConversa);
+
+  promptEl.addEventListener("keydown",e=>{
+    if(e.key==="Enter" && !e.shiftKey){
+      e.preventDefault();
+      enviar();
+    }
+  });
+
+  prepararMicrofone();
+
+  /* A interface fica pronta imediatamente.
+     A checagem do servidor não trava o carregamento. */
+  setStatus("SISTEMA PRONTO");
+  setServer("PRONTO",true);
+  setAI("OMNIROUTE",true);
+  promptEl.focus();
+
+  /* Executa depois do primeiro desenho da tela. */
+  setTimeout(verificarServidor,150);
+}
+
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",iniciar,{once:true});
+}else{
+  iniciar();
+}
+
+if("speechSynthesis" in window){
+  speechSynthesis.onvoiceschanged=()=>{};
+}
+</script>
+</body>
+</html>
